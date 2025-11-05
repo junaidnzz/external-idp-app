@@ -1,0 +1,35 @@
+import { Request, Response } from 'express';
+import { logger } from '../utils/logger';
+
+export interface AppError extends Error {
+  statusCode?: number;
+  isOperational?: boolean;
+}
+
+export const errorHandler = (
+  err: AppError,
+  req: Request,
+  res: Response,
+): void => {
+  logger.error('Error handler:', {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+  });
+
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Internal server error';
+
+  res.status(statusCode).json({
+    error: message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  });
+};
+
+export const notFoundHandler = (req: Request, res: Response): void => {
+  res.status(404).json({
+    error: 'Route not found',
+    path: req.url,
+  });
+};

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Cognito Direct Auth</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 400px;
+            width: 90%;
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-top: 20px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+            margin-top: 10px;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e0;
+            box-shadow: none;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+        .alert-info {
+            background: #bee3f8;
+            color: #2a4e7c;
+            border: 1px solid #90cdf4;
+        }
+        .hidden {
+            display: none;
+        }
+        .links {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .links a:hover {
+            text-decoration: underline;
+        }
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+        .divider:before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e2e8f0;
+        }
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            position: relative;
+            color: #718096;
+        }
+        .token-display {
+            background: #2d3748;
+            color: #48bb78;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Direct Sign In</h1>
+        <p class="subtitle">Authenticate directly with AWS Cognito API</p>
+
+        <div id="alertBox" class="alert hidden"></div>
+
+        <form id="signinForm">
+            <div class="form-group">
+                <label for="username">Username or Email</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit" class="btn">Sign In</button>
+        </form>
+
+        <div class="divider">
+            <span>OR</span>
+        </div>
+
+        <a href="/oauth/login" class="btn btn-secondary" style="display: block; text-align: center;">
+            Sign In with OAuth2/OIDC Flow
+        </a>
+
+        <div id="tokenDisplay" class="hidden">
+            <h3 style="margin-top: 20px; color: #2d3748;">Authentication Tokens:</h3>
+            <div class="token-display" id="tokenContent"></div>
+        </div>
+
+        <div class="links">
+            <a href="/oauth/signup">Create Account</a> | 
+            <a href="/oauth">← Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('signinForm');
+        const alertBox = document.getElementById('alertBox');
+        const tokenDisplay = document.getElementById('tokenDisplay');
+        const tokenContent = document.getElementById('tokenContent');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const response = await fetch('/api/auth/signin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAlert('success', 'Sign in successful!');
+                    
+                    // Display tokens
+                    tokenContent.textContent = JSON.stringify({
+                        accessToken: data.accessToken,
+                        idToken: data.idToken,
+                        refreshToken: data.refreshToken,
+                        expiresIn: data.expiresIn
+                    }, null, 2);
+                    tokenDisplay.classList.remove('hidden');
+                    
+                    // Store tokens if needed
+                    if (data.accessToken) {
+                        localStorage.setItem('accessToken', data.accessToken);
+                        localStorage.setItem('idToken', data.idToken);
+                        localStorage.setItem('refreshToken', data.refreshToken);
+                    }
+                } else {
+                    showAlert('error', data.error || 'Failed to sign in');
+                    tokenDisplay.classList.add('hidden');
+                }
+            } catch (error) {
+                showAlert('error', 'Network error. Please try again.');
+                tokenDisplay.classList.add('hidden');
+            }
+        });
+
+        function showAlert(type, message) {
+            alertBox.className = `alert alert-${type}`;
+            alertBox.textContent = message;
+            alertBox.classList.remove('hidden');
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertBox.classList.add('hidden');
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>

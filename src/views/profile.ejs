@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - External IdP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        .section {
+            margin-bottom: 30px;
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .section h2 {
+            color: #4a5568;
+            font-size: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .token-display {
+            background: #2d3748;
+            color: #48bb78;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            overflow-x: auto;
+        }
+        .attribute-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .attribute {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        .attribute-label {
+            color: #718096;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        .attribute-value {
+            color: #2d3748;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        .copy-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .copy-btn:hover {
+            background: #3182ce;
+        }
+        .json-toggle {
+            background: #805ad5;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        .json-display {
+            background: #2d3748;
+            color: #48bb78;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin-top: 15px;
+            white-space: pre;
+            display: none;
+        }
+        .json-display.show {
+            display: block;
+        }
+        .info-badge {
+            background: #bee3f8;
+            color: #2c5282;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>User Profile</h1>
+
+        <div class="section">
+            <h2>
+                User Information
+                <button class="json-toggle" onclick="toggleJson('user-json')">View JSON</button>
+            </h2>
+            
+            <div class="attribute-grid">
+                <div class="attribute">
+                    <div class="attribute-label">Username</div>
+                    <div class="attribute-value"><%= userInfo.preferred_username || userInfo['cognito:username'] || 'N/A' %></div>
+                </div>
+                
+                <div class="attribute">
+                    <div class="attribute-label">Email</div>
+                    <div class="attribute-value"><%= userInfo.email || 'N/A' %></div>
+                </div>
+                
+                <div class="attribute">
+                    <div class="attribute-label">Email Verified</div>
+                    <div class="attribute-value"><%= userInfo.email_verified ? '✓ Verified' : '✗ Not Verified' %></div>
+                </div>
+                
+                <div class="attribute">
+                    <div class="attribute-label">Subject ID</div>
+                    <div class="attribute-value"><%= userInfo.sub %></div>
+                </div>
+                
+                <% if (userInfo.phone_number) { %>
+                <div class="attribute">
+                    <div class="attribute-label">Phone Number</div>
+                    <div class="attribute-value"><%= userInfo.phone_number %></div>
+                </div>
+                <% } %>
+                
+                <% if (userInfo.given_name || userInfo.family_name) { %>
+                <div class="attribute">
+                    <div class="attribute-label">Full Name</div>
+                    <div class="attribute-value"><%= [userInfo.given_name, userInfo.family_name].filter(Boolean).join(' ') %></div>
+                </div>
+                <% } %>
+            </div>
+            
+            <div id="user-json" class="json-display"><%= JSON.stringify(userInfo, null, 2) %></div>
+        </div>
+
+        <div class="section">
+            <h2>
+                Access Token
+                <span class="info-badge">Use for API calls</span>
+                <button class="copy-btn" onclick="copyToClipboard('<%= tokens.accessToken %>')">Copy</button>
+            </h2>
+            <div class="token-display"><%= tokens.accessToken %></div>
+        </div>
+
+        <div class="section">
+            <h2>
+                ID Token
+                <span class="info-badge">Contains user claims</span>
+                <button class="copy-btn" onclick="copyToClipboard('<%= tokens.idToken %>')">Copy</button>
+            </h2>
+            <div class="token-display"><%= tokens.idToken %></div>
+        </div>
+
+        <div class="section" style="background: #f0fff4; border-color: #9ae6b4;">
+            <h2 style="color: #22543d;">SSO Integration Information</h2>
+            <p style="color: #2f855a; margin-bottom: 15px;">
+                These tokens can be used to establish federated identity with Core Direction.
+            </p>
+            <ul style="color: #276749; margin-left: 20px;">
+                <li>The ID token contains the user's identity claims</li>
+                <li>The access token can be used to call protected APIs</li>
+                <li>User attributes can be mapped during SAML/OIDC federation</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <a href="/oauth" class="btn btn-primary">Back to Home</a>
+            <a href="/oauth/logout" class="btn btn-secondary">Sign Out</a>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+
+        function toggleJson(id) {
+            const element = document.getElementById(id);
+            element.classList.toggle('show');
+        }
+    </script>
+</body>
+</html>
